@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { useNavigate } from 'react-router-dom';
@@ -8,39 +8,14 @@ interface SignUpModalProps {
   onClose: () => void;
 }
 
-interface Organization {
-  id: string;
-  name: string;
-  number: string;
-}
-
 export function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [organizationCode, setOrganizationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
   const login = useAuthStore(state => state.login);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    const fetchOrganizations = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('organisations')
-          .select('id, name, number');
-        
-        if (error) throw error;
-        if (data) setOrganizations(data);
-      } catch (err) {
-        console.error('Error fetching organizations:', err);
-      }
-    };
-
-    fetchOrganizations();
-  }, []);
 
   if (!isOpen) return null;
 
@@ -53,25 +28,12 @@ export function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
       return;
     }
 
-    // Validate organization code
-    const organization = organizations.find(org => org.number === organizationCode);
-    if (!organization) {
-      setError('Invalid organization code');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            organization_id: organization.id,
-            organization_name: organization.name
-          }
-        }
       });
 
       if (signUpError) throw signUpError;
@@ -111,20 +73,6 @@ export function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Organization Code
-            </label>
-            <input
-              type="text"
-              value={organizationCode}
-              onChange={(e) => setOrganizationCode(e.target.value)}
-              className="input-field"
-              placeholder="Enter organization code"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
               Password
             </label>
             <input
@@ -149,15 +97,16 @@ export function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
               className="input-field"
               placeholder="Confirm your password"
               required
-              minLength={6}
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600">{error}</p>
+            <div className="text-red-500 text-sm">
+              {error}
+            </div>
           )}
 
-          <div className="flex justify-end space-x-2 pt-4">
+          <div className="flex justify-end space-x-2">
             <button
               type="button"
               onClick={onClose}
@@ -168,7 +117,7 @@ export function SignUpModal({ isOpen, onClose }: SignUpModalProps) {
             </button>
             <button
               type="submit"
-              className="btn-primary"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               disabled={isLoading}
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
